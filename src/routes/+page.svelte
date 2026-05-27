@@ -10,24 +10,20 @@
 	let finishNotice = $state("");
 	let unlistenResize = $state<(() => void) | undefined>();
 
-	function notifyFinished() {
-		finishNotice = "타이머 종료";
-		window.setTimeout(() => {
-			finishNotice = "";
-		}, 2200);
+	function notifyFinished({ willRepeat }: { willRepeat: boolean }) {
+		if (!willRepeat) {
+			finishNotice = "타이머 종료";
+			window.setTimeout(() => {
+				finishNotice = "";
+			}, 2200);
+		}
 
 		if (!settings.notification || typeof Notification === "undefined") return;
 
 		if (Notification.permission === "granted") {
-			new Notification("MapleSimpleTimer", { body: "타이머가 종료되었습니다." });
-			return;
-		}
-
-		if (Notification.permission === "default") {
-			Notification.requestPermission().then((permission) => {
-				if (permission === "granted") {
-					new Notification("MapleSimpleTimer", { body: "타이머가 종료되었습니다." });
-				}
+			new Notification("MapleSimpleTimer", {
+				body: willRepeat ? "타이머가 종료되어 다시 시작되었습니다." : "타이머가 종료되었습니다.",
+				tag: `maple-simple-timer-${Date.now()}`
 			});
 		}
 	}
@@ -59,13 +55,13 @@
 <main class="app-shell bg-background text-foreground">
 	<div class="app-grid">
 		<section class="timer-row">
-				{#if finishNotice}
-					<div class="finish-notice">
-						{finishNotice}
-					</div>
-				{/if}
+			{#if finishNotice}
+				<div class="finish-notice">
+					{finishNotice}
+				</div>
+			{/if}
 
-			<div class={finishNotice ? "pt-[var(--notice-offset)]" : ""}>
+			<div>
 				<TimeInput />
 			</div>
 			<TimerControls />

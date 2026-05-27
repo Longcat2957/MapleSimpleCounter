@@ -1,0 +1,68 @@
+name: Windows Portable
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-portable:
+    name: Build Windows portable executable
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check Svelte project
+        run: pnpm check
+
+      - name: Build Tauri executable
+        run: pnpm tauri:build --no-bundle --ci
+
+      - name: Collect portable executable
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $exe = Get-ChildItem -Path src-tauri/target/release -Filter *.exe -File |
+            Where-Object { $_.Name -notmatch 'setup|installer|updater' } |
+            Select-Object -First 1
+          if (-not $exe) {
+            throw "Portable executable was not found in src-tauri/target/release"
+          }
+          Copy-Item $exe.FullName dist/MapleSimpleTimer-windows-portable.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: MapleSimpleTimer-windows-portable
+          path: dist/MapleSimpleTimer-windows-portable.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/MapleSimpleTimer-windows-portable.exe

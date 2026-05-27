@@ -18,10 +18,10 @@ class TimerState {
 	readonly canStart = $derived(this.remainingSeconds > 0 && this.status !== "running");
 
 	#intervalId: number | null = null;
-	#onFinish: (() => void) | null = null;
+	#onFinish: ((options: { willRepeat: boolean }) => void) | null = null;
 	#shouldRepeat: (() => boolean) | null = null;
 
-	configure(options: { onFinish?: () => void; shouldRepeat?: () => boolean }) {
+	configure(options: { onFinish?: (options: { willRepeat: boolean }) => void; shouldRepeat?: () => boolean }) {
 		this.#onFinish = options.onFinish ?? null;
 		this.#shouldRepeat = options.shouldRepeat ?? null;
 	}
@@ -114,14 +114,17 @@ class TimerState {
 		this.startedAt = null;
 		this.endsAt = null;
 
-		if (this.#shouldRepeat?.()) {
+		const willRepeat = this.#shouldRepeat?.() === true && this.durationSeconds > 0;
+
+		if (willRepeat) {
 			this.remainingSeconds = this.durationSeconds;
+			this.status = "idle";
 			this.start();
 		} else {
 			this.status = "finished";
 		}
 
-		this.#onFinish?.();
+		this.#onFinish?.({ willRepeat });
 	}
 }
 

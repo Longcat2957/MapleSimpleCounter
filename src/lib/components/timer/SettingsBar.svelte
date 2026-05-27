@@ -10,9 +10,39 @@
 	function toggleTheme() {
 		settings.toggleTheme();
 	}
+
+	async function toggleNotification() {
+		if (settings.notification) {
+			settings.notification = false;
+			return;
+		}
+
+		if (typeof Notification === "undefined") {
+			settings.notification = false;
+			return;
+		}
+
+		if (Notification.permission === "denied") {
+			settings.notification = false;
+			return;
+		}
+
+		if (Notification.permission === "default") {
+			const permission = await Notification.requestPermission();
+			settings.notification = permission === "granted";
+			return;
+		}
+
+		settings.notification = true;
+	}
 </script>
 
-<section class="settings-bar divide-x divide-border">
+<div
+	class="settings-bar divide-x divide-border"
+	role="toolbar"
+	aria-label="타이머 설정"
+	tabindex="-1"
+>
 	<button
 		type="button"
 		class={cn("settings-button settings-toggle", settings.repeat && "is-active")}
@@ -29,7 +59,7 @@
 		title="알림"
 		aria-label="알림"
 		aria-pressed={settings.notification}
-		onclick={() => (settings.notification = !settings.notification)}
+		onclick={toggleNotification}
 	>
 		<BellIcon />
 	</button>
@@ -43,11 +73,17 @@
 	>
 		<PinIcon />
 	</button>
-	<button class="settings-button settings-action" type="button" title="테마" aria-label="테마" onclick={toggleTheme}>
+	<button
+		class="settings-button settings-action"
+		type="button"
+		title="테마"
+		aria-label="테마"
+		onclick={toggleTheme}
+	>
 		{#if settings.theme === "dark"}
 			<SunIcon />
 		{:else}
 			<MoonIcon />
 		{/if}
 	</button>
-</section>
+</div>

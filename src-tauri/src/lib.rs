@@ -2,6 +2,13 @@
 pub fn run() {
   tauri::Builder::default()
     .setup(|app| {
+      use tauri::Manager;
+
+      if let Some(window) = app.get_webview_window("main") {
+        let icon = tauri::image::Image::new(include_bytes!("../icons/icon.rgba"), 512, 512);
+        window.set_icon(icon)?;
+      }
+
       if cfg!(debug_assertions) {
         app.handle().plugin(
           tauri_plugin_log::Builder::default()

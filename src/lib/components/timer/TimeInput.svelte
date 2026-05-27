@@ -11,71 +11,191 @@
 	});
 	const toneClass = $derived(`is-${timer.warningLevel}`);
 
-	function updatePart(part: "hours" | "minutes" | "seconds", event: Event) {
+	type TimePart = "hours" | "minutes" | "seconds";
+	type DigitPlace = "tens" | "ones";
+
+	const digitOrder = ["hours-tens", "hours-ones", "minutes-tens", "minutes-ones", "seconds-tens", "seconds-ones"];
+
+	function digitAt(part: TimePart, place: DigitPlace) {
+		const value = displayParts[part];
+		return place === "tens" ? value[0] : value[1];
+	}
+
+	function clampDigit(part: TimePart, place: DigitPlace, value: number) {
+		if ((part === "minutes" || part === "seconds") && place === "tens") {
+			return Math.min(5, Math.max(0, value));
+		}
+
+		return Math.min(9, Math.max(0, value));
+	}
+
+	function nextInputId(part: TimePart, place: DigitPlace) {
+		const current = `${part}-${place}`;
+		const index = digitOrder.indexOf(current);
+		return digitOrder[index + 1];
+	}
+
+	function previousInputId(part: TimePart, place: DigitPlace) {
+		const current = `${part}-${place}`;
+		const index = digitOrder.indexOf(current);
+		return digitOrder[index - 1];
+	}
+
+	function boundaryInputId(direction: "first" | "last") {
+		return direction === "first" ? digitOrder[0] : digitOrder.at(-1);
+	}
+
+	function focusInput(id: string | undefined) {
+		if (!id) return;
+
+		window.requestAnimationFrame(() => {
+			const input = document.querySelector<HTMLButtonElement>(`[data-digit-id="${id}"]`);
+			input?.focus();
+		});
+	}
+
+	function setDigit(part: TimePart, place: DigitPlace, rawDigit: number) {
 		if (timer.isRunning) return;
 
-		const input = event.currentTarget as HTMLInputElement;
-		const rawValue = Number(input.value);
-		const value = Number.isFinite(rawValue) ? Math.max(0, Math.floor(rawValue)) : 0;
-		const nextParts = { ...parts, [part]: value };
+		const digit = clampDigit(part, place, rawDigit);
+		const current = displayParts[part];
+		const nextValue = Number(place === "tens" ? `${digit}${current[1]}` : `${current[0]}${digit}`);
+		const nextParts = { ...parts, [part]: nextValue };
 
 		timer.setDuration(partsToSeconds(nextParts.hours, nextParts.minutes, nextParts.seconds));
+	}
+
+	function handleDigitKeydown(part: TimePart, place: DigitPlace, event: KeyboardEvent) {
+		if (/^\d$/.test(event.key)) {
+			event.preventDefault();
+			setDigit(part, place, Number(event.key));
+			focusInput(nextInputId(part, place));
+			return;
+		}
+
+		if (event.key === "ArrowLeft") {
+			event.preventDefault();
+			focusInput(previousInputId(part, place));
+			return;
+		}
+
+		if (event.key === "ArrowRight") {
+			event.preventDefault();
+			focusInput(nextInputId(part, place));
+			return;
+		}
+
+		if (event.key === "Home") {
+			event.preventDefault();
+			focusInput(boundaryInputId("first"));
+			return;
+		}
+
+		if (event.key === "End") {
+			event.preventDefault();
+			focusInput(boundaryInputId("last"));
+			return;
+		}
+
+		if (event.key === "Backspace" || event.key === "Delete") {
+			event.preventDefault();
+			setDigit(part, place, 0);
+
+			if (event.key === "Backspace" && digitAt(part, place) === "0") {
+				focusInput(previousInputId(part, place));
+			}
+			return;
+		}
+
+		if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+
+		event.preventDefault();
+		const current = Number(digitAt(part, place));
+		const delta = event.key === "ArrowUp" ? 1 : -1;
+		setDigit(part, place, current + delta);
 	}
 </script>
 
 <section class="timer-input-grid" aria-label="timer duration">
 	<label class="time-segment">
 		<span class="time-box">
-			<span class={cn("time-value", toneClass)} aria-hidden="true">{displayParts.hours}</span>
+			<span class="digit-pair">
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="hours-tens"
+					onkeydown={(event) => handleDigitKeydown("hours", "tens", event)}
+					aria-label="hours tens"
+				>
+					{digitAt("hours", "tens")}
+				</button>
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="hours-ones"
+					onkeydown={(event) => handleDigitKeydown("hours", "ones", event)}
+					aria-label="hours ones"
+				>
+					{digitAt("hours", "ones")}
+				</button>
+			</span>
 			<span class="time-label" aria-hidden="true">시</span>
 		</span>
-		<input
-			class="time-input"
-			type="text"
-			inputmode="numeric"
-			pattern="[0-9]*"
-			maxlength="2"
-			value={String(parts.hours).padStart(2, "0")}
-			disabled={timer.isRunning}
-			onfocus={(event) => (event.currentTarget as HTMLInputElement).select()}
-			oninput={(event) => updatePart("hours", event)}
-			aria-label="hours"
-		/>
 	</label>
 	<label class="time-segment">
 		<span class="time-box">
-			<span class={cn("time-value", toneClass)} aria-hidden="true">{displayParts.minutes}</span>
+			<span class="digit-pair">
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="minutes-tens"
+					onkeydown={(event) => handleDigitKeydown("minutes", "tens", event)}
+					aria-label="minutes tens"
+				>
+					{digitAt("minutes", "tens")}
+				</button>
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="minutes-ones"
+					onkeydown={(event) => handleDigitKeydown("minutes", "ones", event)}
+					aria-label="minutes ones"
+				>
+					{digitAt("minutes", "ones")}
+				</button>
+			</span>
 			<span class="time-label" aria-hidden="true">분</span>
 		</span>
-		<input
-			class="time-input"
-			type="text"
-			inputmode="numeric"
-			pattern="[0-9]*"
-			maxlength="2"
-			value={String(parts.minutes).padStart(2, "0")}
-			disabled={timer.isRunning}
-			onfocus={(event) => (event.currentTarget as HTMLInputElement).select()}
-			oninput={(event) => updatePart("minutes", event)}
-			aria-label="minutes"
-		/>
 	</label>
 	<label class="time-segment">
 		<span class="time-box">
-			<span class={cn("time-value", toneClass)} aria-hidden="true">{displayParts.seconds}</span>
+			<span class="digit-pair">
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="seconds-tens"
+					onkeydown={(event) => handleDigitKeydown("seconds", "tens", event)}
+					aria-label="seconds tens"
+				>
+					{digitAt("seconds", "tens")}
+				</button>
+				<button
+					type="button"
+					class={cn("time-digit-input", toneClass)}
+					disabled={timer.isRunning}
+					data-digit-id="seconds-ones"
+					onkeydown={(event) => handleDigitKeydown("seconds", "ones", event)}
+					aria-label="seconds ones"
+				>
+					{digitAt("seconds", "ones")}
+				</button>
+			</span>
 			<span class="time-label" aria-hidden="true">초</span>
 		</span>
-		<input
-			class="time-input"
-			type="text"
-			inputmode="numeric"
-			pattern="[0-9]*"
-			maxlength="2"
-			value={String(parts.seconds).padStart(2, "0")}
-			disabled={timer.isRunning}
-			onfocus={(event) => (event.currentTarget as HTMLInputElement).select()}
-			oninput={(event) => updatePart("seconds", event)}
-			aria-label="seconds"
-		/>
 	</label>
 </section>

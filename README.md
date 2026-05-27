@@ -1,42 +1,52 @@
-# sv
+# MapleSimpleTimer
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+MapleSimpleTimer is a small desktop timer for MapleStory routines. It is built with Svelte 5 runes, Tauri 2, Tailwind CSS, and shadcn-svelte.
 
-## Creating a project
+## Features
 
-If you're seeing this, you've probably already done this step. Congrats!
+- Hour, minute, and second timer input with separated digit controls
+- Quick add buttons for common durations
+- Start, pause, and reset controls
+- Warning colors below 30 seconds and 10 seconds
+- Repeat mode for automatic restart
+- Desktop notifications
+- Always-on-top toggle
+- Light and dark themes
+- Bundled Noto Sans KR and Oxanium fonts
+- Custom fixed-ratio resize handle
 
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-pnpm dlx sv@0.15.3 create --template minimal --types ts --add tailwindcss="plugins:none" sveltekit-adapter="adapter:static" --no-download-check --install pnpm /tmp/mapleCounter-sveltekit
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+## Development
 
 ```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm install
+pnpm tauri:dev
 ```
 
-## Building
+The Tauri dev script sets `WEBKIT_DISABLE_DMABUF_RENDERER=1` for Linux WebKit rendering stability.
 
-To create a production version of your app:
+## Checks
 
 ```sh
-npm run build
+pnpm check
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-You can preview the production build with `npm run preview`.
+## Production Build
 
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Local Tauri build:
+
+```sh
+pnpm tauri:build
+```
+
+Windows portable builds are produced by GitHub Actions. The workflow builds on `windows-latest` and uploads `MapleSimpleTimer-windows-portable.exe` as an artifact. When pushing a `v*` tag, the same executable is attached to the GitHub Release.
+
+## Release
+
+```sh
+git tag v1.0.0
+git push origin main
+git push origin v1.0.0
+```
+
+The `v1.0.0` tag triggers the Windows portable release build.
