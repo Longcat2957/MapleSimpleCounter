@@ -1,5 +1,4 @@
 <script lang="ts">
-	import PlusIcon from "@lucide/svelte/icons/plus";
 	import { Button } from "$lib/components/ui/button";
 	import { timer } from "$lib/state/timer.svelte";
 
@@ -11,6 +10,11 @@
 		{ label: "5분", seconds: 300 },
 		{ label: "10분", seconds: 600 }
 	];
+
+	function subtractSeconds(seconds: number, event: MouseEvent) {
+		event.preventDefault();
+		timer.addSeconds(-seconds);
+	}
 </script>
 
 <section class="quick-add-bar divide-x divide-border">
@@ -18,10 +22,12 @@
 		<Button
 			class="quick-add-button justify-center hover:bg-muted hover:text-foreground"
 			variant="ghost"
+			title={`좌클릭 +${item.label}, 우클릭 -${item.label}`}
 			onclick={() => timer.addSeconds(item.seconds)}
-			aria-label={`${item.label} 추가`}
+			oncontextmenu={(event) => subtractSeconds(item.seconds, event)}
+			aria-label={`${item.label} 추가, 우클릭으로 감소`}
 		>
-			<PlusIcon class="size-3.5" />
+			<span class="quick-adjust-symbol" aria-hidden="true">±</span>
 			{item.label}
 		</Button>
 	{/each}

@@ -20,6 +20,11 @@
 
 		if (!settings.notification || typeof Notification === "undefined") return;
 
+		if (Notification.permission !== "granted") {
+			settings.notification = false;
+			return;
+		}
+
 		if (Notification.permission === "granted") {
 			new Notification("MapleSimpleTimer", {
 				body: willRepeat ? "타이머가 종료되어 다시 시작되었습니다." : "타이머가 종료되었습니다.",

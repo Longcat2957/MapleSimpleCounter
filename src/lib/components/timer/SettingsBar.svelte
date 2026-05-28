@@ -7,34 +7,49 @@
 	import { cn } from "$lib/utils";
 	import { settings } from "$lib/state/settings.svelte";
 
+	type NotificationSupport = NotificationPermission | "unsupported";
+
+	let notificationPermission = $state<NotificationSupport>("default");
+	const isNotificationUnavailable = $derived(notificationPermission === "unsupported" || notificationPermission === "denied");
+
 	function toggleTheme() {
 		settings.toggleTheme();
 	}
 
+	function syncNotificationPermission() {
+		notificationPermission = typeof Notification === "undefined" ? "unsupported" : Notification.permission;
+
+		if (notificationPermission !== "granted") {
+			settings.notification = false;
+		}
+	}
+
 	async function toggleNotification() {
+		syncNotificationPermission();
+
 		if (settings.notification) {
 			settings.notification = false;
 			return;
 		}
 
-		if (typeof Notification === "undefined") {
+		if (notificationPermission === "unsupported" || notificationPermission === "denied") {
 			settings.notification = false;
 			return;
 		}
 
-		if (Notification.permission === "denied") {
-			settings.notification = false;
-			return;
-		}
-
-		if (Notification.permission === "default") {
+		if (notificationPermission === "default") {
 			const permission = await Notification.requestPermission();
+			notificationPermission = permission;
 			settings.notification = permission === "granted";
 			return;
 		}
 
 		settings.notification = true;
 	}
+
+	$effect(() => {
+		syncNotificationPermission();
+	});
 </script>
 
 <div
@@ -55,10 +70,11 @@
 	</button>
 	<button
 		type="button"
-		class={cn("settings-button settings-toggle", settings.notification && "is-active")}
-		title="알림"
-		aria-label="알림"
+		class={cn("settings-button settings-toggle", settings.notification && "is-active", isNotificationUnavailable && "is-disabled")}
+		title={notificationPermission === "denied" ? "알림 권한 차단됨" : "알림"}
+		aria-label={notificationPermission === "denied" ? "알림 권한 차단됨" : "알림"}
 		aria-pressed={settings.notification}
+		disabled={isNotificationUnavailable}
 		onclick={toggleNotification}
 	>
 		<BellIcon />
